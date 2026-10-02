@@ -4,19 +4,41 @@ import OSLog
 /// Centralized logging system for SwiftOBD2
 /// Provides structured logging with consistent categories and levels
 public class OBDLogger {
+  
     
-    // MARK: - Categories
+    
+#if DEBUG
+    /// Controls whether logging is enabled
+    public var isLoggingEnabled: Bool = true
+
+#endif
+    
+#if !DEBUG
+    /// Controls whether logging is enabled
+    public var isLoggingEnabled: Bool = false
+
+#endif
+    
+    /// Controls the minimum log level to display
+    public var minimumLogLevel: OSLogType = .debug
+  //  let date = Date()
+        
+        
+        
+   // MARK: - Categories
     
     public enum Category: String, CaseIterable {
-        case connection = "Connection"
-        case communication = "Communication" 
-        case parsing = "Parsing"
-        case service = "Service"
-        case bluetooth = "Bluetooth"
-        case wifi = "WiFi"
-        case `protocol` = "Protocol"
+        case connection  = "Connection"
+        case communication = "Communication"
+        case parsing     = "Parsing"
+        case service     = "Service"
+        case bluetooth   = "Bluetooth"
+        case wifi        = "WiFi"
+        case `protocol`  = "Protocol"
         case performance = "Performance"
-        case error = "Error"
+        case error       = "Error"
+        case info        = "Info"
+        case trace       = "Trace"
     }
     
     // MARK: - Shared Instance
@@ -27,12 +49,7 @@ public class OBDLogger {
     
     private let subsystem: String
     private var loggers: [Category: Logger] = [:]
-    
-    /// Controls whether logging is enabled
-    public var isLoggingEnabled: Bool = true
-    
-    /// Controls the minimum log level to display
-    public var minimumLogLevel: OSLogType = .debug
+
     
     // MARK: - Initialization
     
@@ -68,13 +85,17 @@ public class OBDLogger {
     public func fault(_ message: String, category: Category = .error, file: String = #file, function: String = #function, line: Int = #line) {
         log(message, level: .fault, category: category, file: file, function: function, line: line)
     }
-    
+ 
+     
     private func log(_ message: String, level: OSLogType, category: Category, file: String, function: String, line: Int) {
         guard isLoggingEnabled && level.rawValue >= minimumLogLevel.rawValue else { return }
         guard let logger = loggers[category] else { return }
         
+        let formattedFractional = Date().formatted(.dateTime.hour().minute().second().secondFraction(.fractional(3))) // example: "8:07:48.145 AM" print(formattedFractional)”
+        
+        
         let fileName = URL(fileURLWithPath: file).lastPathComponent
-        let formattedMessage = "[\(fileName):\(line)] \(function) - \(message)"
+        let formattedMessage = "[\(formattedFractional)_\(fileName):\(line)] (\(function))  -> \(message)"
         
         switch level {
         case .debug:
@@ -96,9 +117,11 @@ public class OBDLogger {
     
     /// Log connection state changes
     public func logConnectionChange(from oldState: ConnectionState, to newState: ConnectionState) {
+        obdDebug(" === Trace === In OBDLogger func  logConnectionChange ")
         let oldStateString = String(describing: oldState)
         let newStateString = String(describing: newState)
         info("Connection state changed: \(oldStateString) → \(newStateString)", category: .connection)
+        obdDebug("Connection state changed: \(oldStateString) → \(newStateString)", category: .connection)
     }
 
     /// Log command execution with timing
@@ -188,3 +211,5 @@ public func obdError(_ message: String, category: OBDLogger.Category = .error, f
 public func obdFault(_ message: String, category: OBDLogger.Category = .error, file: String = #file, function: String = #function, line: Int = #line) {
     OBDLogger.shared.fault(message, category: category, file: file, function: function, line: line)
 }
+
+
