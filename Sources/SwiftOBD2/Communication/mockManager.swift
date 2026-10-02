@@ -23,6 +23,12 @@ struct MockECUSettings {
 }
 
 class MOCKComm: CommProtocol {
+   
+    
+    func reset() {
+    
+    }
+    
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.example.app", category: "MOCKComm")
 
     @Published var connectionState: ConnectionState = .disconnected
@@ -391,3 +397,4 @@ extension String {
         }
     }
 }
+
