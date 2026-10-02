@@ -34,6 +34,7 @@ class BLEPeripheralScanner: ObservableObject {
     private var foundPeripheralCompletion: ((CBPeripheral?, Error?) -> Void)?
 
     func addDiscoveredPeripheral(_ peripheral: CBPeripheral, advertisementData: [String: Any], rssi: NSNumber) {
+        obdDebug(" === Trace === In BLEPeripheralScanner func  addDiscoveredPeripheral ")
         // Filter out peripherals with invalid RSSI
         guard rssi.intValue < 0 else { return }
 
@@ -51,6 +52,7 @@ class BLEPeripheralScanner: ObservableObject {
     }
 
     func waitForFirstPeripheral(timeout: TimeInterval) async throws -> CBPeripheral {
+        obdDebug(" === Trace === In BLEPeripheralScanner func  waitForFirstPeripheral ")
         // If we already have peripherals, return the first one
         if let first = foundPeripherals.first {
             return first
@@ -69,6 +71,16 @@ class BLEPeripheralScanner: ObservableObject {
                     }
                 }
             }
+        }
+    }
+    
+    
+    func reset() {
+        obdDebug(" === Trace === In BLEPeripheralScanner func  reset ")
+        foundPeripherals.removeAll()
+        if let completion = foundPeripheralCompletion {
+            foundPeripheralCompletion = nil
+            completion(nil, BLEScannerError.scanTimeout)
         }
     }
 }
@@ -103,6 +115,7 @@ func withTimeout<R>(
     onTimeout: (() -> Void)? = nil,
     operation: @escaping @Sendable () async throws -> R
 ) async throws -> R {
+ //   obdDebug(" === Trace === In BLEPeripheralScanner func  withTimeout ")
     try await withThrowingTaskGroup(of: R.self) { group in
         group.addTask {
             let result = try await operation()
