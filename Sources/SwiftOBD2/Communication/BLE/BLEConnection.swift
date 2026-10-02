@@ -48,6 +48,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     // MARK: - Initialization
 
     init(centralManager: CBCentralManager, supportedServices: [CBUUID] = BLEConnection.defaultServices) {
+        obdDebug(" === Trace === In BLEConnection func  init.Centralmanager ")
         self.centralManager = centralManager
         self.supportedServices = supportedServices
         super.init()
@@ -63,6 +64,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     // MARK: - Connection Management
 
     func connect(to peripheral: CBPeripheral, timeout: TimeInterval = 10.0) async throws {
+        obdDebug(" === Trace === In BLEConnection func  connect ")
         guard let centralManager = centralManager else {
             throw BLEConnectionError.centralManagerNotAvailable
         }
@@ -137,6 +139,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     }
 
     func disconnect() {
+        obdDebug(" === Trace === In BLEConnection func  disconnect ")
         guard let peripheral = connectedPeripheral else {
             logger.debug("No peripheral connected to disconnect")
             return
@@ -147,6 +150,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     }
 
     func isReady() -> Bool {
+        obdDebug(" === Trace === In BLEConnection func  isReady ")
         let hasConnection = connectionState == .connectedToAdapter
         let hasReadChar = ecuReadCharacteristic != nil
         let hasWriteChar = ecuWriteCharacteristic != nil
@@ -162,6 +166,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     // MARK: - Internal Connection Handling
 
     func handleDidConnect(_ peripheral: CBPeripheral) {
+        obdDebug(" === Trace === In BLEConnection func  handleDidConnect ")
         logger.info("Connected to peripheral: \(peripheral.name ?? "Unnamed")")
         connectedPeripheral = peripheral
         connectionState = .connectedToAdapter
@@ -186,6 +191,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     }
 
     func handleDidDisconnect(_ peripheral: CBPeripheral, error: Error?) {
+        obdDebug(" === Trace === In BLEConnection func  handleDidDisconnect ")
         if let error = error {
             logger.warning("Disconnected from peripheral with error: \(error.localizedDescription)")
         } else {
@@ -196,6 +202,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     }
 
     func handleDidFailToConnect(_: CBPeripheral, error: Error?) {
+        obdDebug(" === Trace === In BLEConnection func  handleDidFailToConnect ")
         let errorMessage = error?.localizedDescription ?? "Unknown error"
         logger.error("Failed to connect to peripheral: \(errorMessage)")
 
@@ -210,6 +217,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     // MARK: - Service and Characteristic Discovery
 
     func handleDidDiscoverServices(_ peripheral: CBPeripheral, error: Error?) {
+        obdDebug(" === Trace === In BLEConnection func  handleDidDiscoverServices ")
         if let error = error {
             logger.error("Service discovery failed: \(error.localizedDescription)")
             connectionTimeout?.cancel()
@@ -257,6 +265,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     }
 
     func handleDidDiscoverCharacteristics(_ peripheral: CBPeripheral, service: CBService, error: Error?) {
+        obdDebug(" === Trace === In BLEConnection func  handleDidDiscoverCharacteristics ")
         if let error = error {
             logger.error("Characteristic discovery failed: \(error.localizedDescription)")
             return
@@ -294,6 +303,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     // MARK: - Private Helper Methods
 
     private func discoverCharacteristicsForService(_ service: CBService, on peripheral: CBPeripheral) {
+        obdDebug(" === Trace === In BLEConnection func  discoverCharacteristicsForServices ")
         let characteristicUUIDs: [CBUUID]
 
         switch service.uuid {
@@ -311,6 +321,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     }
 
     private func configureCharacteristic(_ characteristic: CBCharacteristic, on peripheral: CBPeripheral) {
+        obdDebug(" === Trace === In BLEConnection func  configureCharacteristic ")
         let uuid = characteristic.uuid.uuidString.uppercased()
         let properties = characteristic.properties
 
@@ -373,6 +384,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     }
 
     private func resetConnectionState() {
+        obdDebug(" === Trace === In BLEConnection func  resetConnectionState ")
         ecuReadCharacteristic = nil
         ecuWriteCharacteristic = nil
         connectedPeripheral = nil
@@ -385,6 +397,7 @@ class BLEConnection: NSObject, BLEConnectionProtocol {
     // MARK: - Cleanup
 
     deinit {
+        obdDebug(" === Trace === In BLEConnection func  deinit ")
         disconnect()
         connectionTimeout?.cancel()
         logger.debug("BLEConnection deinitialized")
@@ -447,3 +460,4 @@ enum BLEConnectionError: Error, LocalizedError, Equatable {
         }
     }
 }
+
