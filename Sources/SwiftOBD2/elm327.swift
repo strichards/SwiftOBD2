@@ -65,7 +65,7 @@ class ELM327 {
         }
     }
 
-    private var r100: [String] = []
+    private var r100: [String] = [""]
 
     var connectionState: ConnectionState = .disconnected {
         didSet {
@@ -79,13 +79,15 @@ class ELM327 {
     }
 
     private func setupConnectionStateSubscriber() {
+        obdDebug(" === Trace === In ELM327 func  setupConnectionStateSubscriber ")
         comm.connectionStatePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 self?.connectionState = state
                 self?.obdDelegate?.connectionStateChanged(state: state)
-                self?.logger.debug("Connection state updated: \(state.hashValue)")
-            }
+                self?.logger.debug("Connection state updated in setupConnectionStateSubscriber() line 87: State: \(String(describing: state)) ")
+                self?.logger.debug("Connection state updated: \(state.description)")
+                            }
             .store(in: &cancellables)
     }
 
@@ -104,6 +106,7 @@ class ELM327 {
     ///     - `SetupError.ignitionOff` if the vehicle's ignition is not on.
     ///     - `SetupError.invalidProtocol` if the protocol is not recognized.
     func setupVehicle(preferredProtocol: PROTOCOL?) async throws -> OBDInfo {
+        obdDebug(" === Trace === In ELM327 func  setupVehicle ")
         //        var obdProtocol: PROTOCOL?
         let detectedProtocol = try await detectProtocol(preferredProtocol: preferredProtocol)
 
@@ -112,20 +115,35 @@ class ELM327 {
         //        }
 
         //        self.obdProtocol = obdProtocol
+        
         canProtocol = protocols[detectedProtocol]
-
+        obdDebug("Showing canProtocol: \(canProtocol)  ...", category: .connection)
+       
         let vin = await requestVin()
-
+        obdDebug("Showing vin: \(vin)  ...", category: .connection)
+        
         //        try await setHeader(header: "7E0")
 
         let supportedPIDs = await getSupportedPIDs()
+        
+        obdDebug("Showing supportedPids: \(supportedPIDs) in setup ...", category: .connection)
+        obdDebug("Showing r100  : \(r100) in setup ...", category: .connection)
 
+        
+   //sr    let messages = ((try? canProtocol?.parse(r100)) ?? nil)!
+   //sr    r100 = PROTOCOL   //  should be returned value
+        
         guard let messages = try canProtocol?.parse(r100) else {
+            obdDebug("Failed here:  in setupVehicle ...", category: .connection)
             throw ELM327Error.invalidResponse(message: "Invalid response to 0100")
         }
 
+        
+        obdDebug("Passed canProtocol guard in setupVehicle ...", category: .connection)
+    
         let ecuMap = populateECUMap(messages)
 
+        obdDebug("Showing ecuMap: \(ecuMap) in setupVehicle ...", category: .connection)
         connectionState = .connectedToVehicle
         return OBDInfo(vin: vin, supportedPIDs: supportedPIDs, obdProtocol: detectedProtocol, ecuMap: ecuMap)
     }
@@ -137,6 +155,7 @@ class ELM327 {
     /// - Returns: The detected `PROTOCOL`.
     /// - Throws: `ELM327Error` if detection fails.
     private func detectProtocol(preferredProtocol: PROTOCOL? = nil) async throws -> PROTOCOL {
+        obdDebug(" === Trace === In ELM327 func  detectProtocol ")
         logger.info("Starting protocol detection...")
 
         if let protocolToTest = preferredProtocol {
@@ -162,6 +181,7 @@ class ELM327 {
     /// - Returns: The detected protocol, or nil if none could be found.
     /// - Throws: Various setup-related errors.
     private func detectProtocolAutomatically() async throws -> PROTOCOL {
+        obdDebug(" === Trace === In ELM327 func  detectProtocolAutomatically ")
         _ = try await okResponse("ATSP0")
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         _ = try await sendCommand("0100")
@@ -182,6 +202,7 @@ class ELM327 {
     /// - Returns: The detected protocol, or nil if none could be found.
     /// - Throws: Various setup-related errors.
     private func detectProtocolManually() async throws -> PROTOCOL {
+        obdDebug(" === Trace === In ELM327 func  detectProtocolManually ")
         for protocolOption in PROTOCOL.allCases where protocolOption != .NONE {
             self.logger.info("Testing protocol: \(protocolOption.description)")
             _ = try await okResponse(protocolOption.cmd)
@@ -200,6 +221,7 @@ class ELM327 {
     /// - Parameter obdProtocol: The protocol to test.
     /// - Throws: Various setup-related errors.
     private func testProtocol(_ obdProtocol: PROTOCOL) async -> Bool {
+        obdDebug(" === Trace === In ELM327 func  testProtocol ")
         // test protocol by sending 0100 and checking for 41 00 response
         let response = try? await sendCommand("0100", retries: 3)
 
@@ -217,6 +239,7 @@ class ELM327 {
     // MARK: - Adapter Initialization
 
     func connectToAdapter(timeout: TimeInterval, peripheral: CBPeripheral? = nil) async throws {
+        obdDebug(" === Trace === In ELM327 func  connectToAdapter ")
         try await comm.connectAsync(timeout: timeout, peripheral: peripheral)
     }
 
@@ -224,6 +247,7 @@ class ELM327 {
     /// - Parameter setupOrder: A list of commands to send in order.
     /// - Throws: Various setup-related errors.
     func adapterInitialization() async throws {
+        obdDebug(" === Trace === In ELM327 func  adapterInitialization ")
         //        [.ATZ, .ATD, .ATL0, .ATE0, .ATH1, .ATAT1, .ATRV, .ATDPN]
         logger.info("Initializing ELM327 adapter...")
         do {
@@ -233,6 +257,7 @@ class ELM327 {
             _ = try await okResponse("ATS0") // Spaces off
             _ = try await okResponse("ATH1") // Headers off
             _ = try await okResponse("ATSP0") // Set protocol to automatic
+            _ = try await okResponse("ATCAF1") // Turn on Line/CAN Automatic Formatting so the ELM chip handles multi-frame package
             logger.info("ELM327 adapter initialized successfully.")
         } catch {
             logger.error("Adapter initialization failed: \(error.localizedDescription)")
@@ -241,10 +266,12 @@ class ELM327 {
     }
 
     private func setHeader(header: String) async throws {
+        obdDebug(" === Trace === In ELM327 func  setHeader ")
         _ = try await okResponse("AT SH " + header)
     }
 
     func stopConnection() {
+        obdDebug(" === Trace === In ELM327 func  stopConnection ")
         comm.disconnectPeripheral()
         connectionState = .disconnected
     }
@@ -252,10 +279,13 @@ class ELM327 {
     // MARK: - Message Sending
 
     func sendCommand(_ message: String, retries: Int = 1) async throws -> [String] {
-        try await comm.sendCommand(message, retries: retries)
+        obdDebug(" === Trace === In ELM327 func  sendCommand ")
+        // sr added return
+        return try await comm.sendCommand(message, retries: retries)
     }
 
     private func okResponse(_ message: String) async throws -> [String] {
+        obdDebug(" === Trace === In ELM327 func  okResponse ")
         let response = try await sendCommand(message)
         if response.contains("OK") {
             return response
@@ -266,6 +296,7 @@ class ELM327 {
     }
 
     func getStatus() async throws -> Result<DecodeResult, DecodeError> {
+        obdDebug(" === Trace === In ELM327 func  getStatus ")
         logger.info("Getting status")
         let statusCommand = OBDCommand.Mode1.status
         let statusResponse = try await sendCommand(statusCommand.properties.command)
@@ -277,6 +308,7 @@ class ELM327 {
     }
 
     func scanForTroubleCodes() async throws -> [ECUID: [TroubleCode]] {
+        obdDebug(" === Trace === In ELM327 func  scanForTroubleCodes ")
         var dtcs: [ECUID: [TroubleCode]] = [:]
         logger.info("Scanning for trouble codes")
         let dtcCommand = OBDCommand.Mode3.GET_DTC
@@ -305,15 +337,20 @@ class ELM327 {
     }
 
     func clearTroubleCodes() async throws {
+        obdDebug(" === Trace === In ELM327 func  clearTroubleCodes ")
         let command = OBDCommand.Mode4.CLEAR_DTC
         _ = try await sendCommand(command.properties.command)
     }
 
     func scanForPeripherals() async throws {
+        obdDebug(" === Trace === In ELM327 func  scanForPeripherals ")
         try await comm.scanForPeripherals()
     }
 
     func requestVin() async -> String? {
+        obdDebug(" === Trace === In ELM327 func  requestVin ")
+        obdDebug("Requesting VIN r...", category: .connection)
+   //     return "1234567890123456789"
         let command = OBDCommand.Mode9.VIN
         guard let vinResponse = try? await sendCommand(command.properties.command) else {
             return nil
@@ -336,6 +373,7 @@ class ELM327 {
 
 extension ELM327 {
     private func populateECUMap(_ messages: [MessageProtocol]) -> [UInt8: ECUID]? {
+        obdDebug(" === Trace === In ELM327 extension func  populateECUMap ")
         let engineTXID = 0
         let transmissionTXID = 1
         var ecuMap: [UInt8: ECUID] = [:]
@@ -399,6 +437,7 @@ extension ELM327 {
     /// Get the supported PIDs
     /// - Returns: Array of supported PIDs
     func getSupportedPIDs() async -> [OBDCommand] {
+        obdDebug(" === Trace === In ELM327 extension func  getSupportedPIDs ")
         let pidGetters = OBDCommand.pidGetters
         var supportedPIDs: [OBDCommand] = []
 
@@ -417,7 +456,7 @@ extension ELM327 {
                 let supportedCommands = OBDCommand.allCommands
                     .filter { supportedPidsByECU.contains(String($0.properties.command.dropFirst(2))) }
                     .map { $0 }
-
+                obdDebug("in Get Supported PIDs (commands) \(supportedCommands) ", category: .connection)
                 supportedPIDs.append(contentsOf: supportedCommands)
             } catch {
                 logger.error("\(error.localizedDescription)")
@@ -431,6 +470,7 @@ extension ELM327 {
     }
 
     private func parseResponse(_ response: [String]) -> Set<String>? {
+        obdDebug(" === Trace === In ELM327 extension func  gparseResponse ")
         guard let ecuData = try? canProtocol?.parse(response).first?.data else {
             return nil
         }
@@ -439,6 +479,7 @@ extension ELM327 {
     }
 
     func extractSupportedPIDs(_ binaryData: [Int]) -> Set<String> {
+        obdDebug(" === Trace === In ELM327 extension func  extractSupportedPIDs ")
         var supportedPIDs: Set<String> = []
 
         for (index, value) in binaryData.enumerated() {
