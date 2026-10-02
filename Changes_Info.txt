@@ -1,0 +1,12 @@
+change OBD2 dongle VeePeak (currently all) initiializer to ATWS from ATZ (ATZ hangs) (future fix to test for hang then do warm reset)
+added debug trace statements to methods/functions
+added additional debugging displays
+included code from valexa may17 commit
+added code (from AI) to stop hang
+adjusted frame count in parser when frame count did not match single frame returned 
+
+
+Testing was done with
+       https://github.com/strichards/DRTE_Helper (currently private )
+       
+       email me if you want access ( mailto:support-drte@devadu.com )
