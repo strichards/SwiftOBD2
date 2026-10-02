@@ -10,13 +10,13 @@ import Foundation
 protocol CANProtocol {
     var elmID: String { get }
     var name: String { get }
-
     func parse(_ lines: [String]) throws -> [MessageProtocol]
+    
 }
 
 extension CANProtocol {
     func parseDefault(_ lines: [String], idBits: Int) throws -> [MessageProtocol] {
-        try CANParser(lines, idBits: idBits).messages
+         try CANParser(lines, idBits: idBits).messages
     }
 
     func parseLegacy(_ lines: [String]) throws -> [MessageProtocol] {
@@ -37,7 +37,8 @@ class ISO_15765_4_29bit_500k: CANProtocol {
     let elmID = "7"
     let name = "ISO 15765-4 (CAN 29/500)"
     func parse(_ lines: [String]) throws -> [MessageProtocol] {
-        try parseDefault(lines, idBits: 11)
+      //  try parseDefault(lines, idBits: 11)
+        try parseDefault(lines, idBits: 29)
     }
 }
 
