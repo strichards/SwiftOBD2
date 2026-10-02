@@ -10,11 +10,11 @@ import Foundation
 func bytesToInt(_ byteArray: Data) -> Int {
     var value = 0
     var power = 0
-
-    for byte in byteArray.reversed() {
+     for byte in byteArray.reversed() {
         value += Int(byte) << power
         power += 8
     }
+    
     return value
 }
 
@@ -129,3 +129,4 @@ let protocols: [PROTOCOL: CANProtocol] = [
     .protocol9: ISO_15765_4_29bit_250k(),
     .protocolA: SAE_J1939(),
 ]
+
