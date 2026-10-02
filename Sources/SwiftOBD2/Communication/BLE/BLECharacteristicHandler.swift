@@ -3,7 +3,7 @@ import OSLog
 import CoreBluetooth
 
 class BLECharacteristicHandler {
-    private var ecuReadCharacteristic: CBCharacteristic?
+       private var ecuReadCharacteristic: CBCharacteristic?
        private var ecuWriteCharacteristic: CBCharacteristic?
        private let messageProcessor: BLEMessageProcessor
        private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.example.app", category: "BLECharacteristicHandler")
@@ -11,13 +11,23 @@ class BLECharacteristicHandler {
        var isReady: Bool {
            ecuReadCharacteristic != nil && ecuWriteCharacteristic != nil
        }
+    
+        var isReadyRW: Bool {
+            ecuReadCharacteristic != nil && ecuWriteCharacteristic != nil
+        }
+        
+        var isReadyRO: Bool {
+            ecuReadCharacteristic != nil
+        }
 
+    
        init(messageProcessor: BLEMessageProcessor) {
            self.messageProcessor = messageProcessor
        }
 
 
     func setupCharacteristics(_ characteristics: [CBCharacteristic], on peripheral: CBPeripheral) {
+           obdDebug(" === Trace === In BLECharacteristicHandler func  setupCharacteristics ")
            for characteristic in characteristics {
                // Set up notifications for characteristics that support it
                if characteristic.properties.contains(.notify) {
@@ -63,6 +73,7 @@ class BLECharacteristicHandler {
        }
 
     func discoverCharacteristics(for service: CBService, on peripheral: CBPeripheral) {
+        obdDebug(" === Trace === In BLECharacteristicHandler func  discoverCharacteristics ")
         switch service.uuid {
         case CBUUID(string: "FFE0"):
             peripheral.discoverCharacteristics([CBUUID(string: "FFE1")], for: service)
@@ -76,6 +87,7 @@ class BLECharacteristicHandler {
     }
 
     func writeCommand(_ command: String, to peripheral: CBPeripheral) throws {
+        obdDebug(" === Trace === In BLECharacteristicHandler func  writeCommand ")
         guard let characteristic = ecuWriteCharacteristic,
               let data = "\(command)\r".data(using: .ascii) else {
             throw BLEManagerError.missingPeripheralOrCharacteristic
@@ -86,6 +98,7 @@ class BLECharacteristicHandler {
     }
 
     func handleUpdatedValue(_ data: Data, from characteristic: CBCharacteristic) {
+        obdDebug(" === Trace === In BLECharacteristicHandler func  handleUpdatedValue ")
         guard characteristic == ecuReadCharacteristic else {
             if let responseString = String(data: data, encoding: .utf8) {
                 logger.info("Unknown characteristic: \(characteristic)\nResponse: \(responseString)")
@@ -96,8 +109,10 @@ class BLECharacteristicHandler {
         messageProcessor.processReceivedData(data)
     }
 
-    func reset() {
+   func reset() {
+        obdDebug(" === Trace === In BLECharacteristicHandler func  reset")
         ecuReadCharacteristic = nil
         ecuWriteCharacteristic = nil
     }
 }
+
