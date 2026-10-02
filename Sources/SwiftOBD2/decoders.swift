@@ -116,6 +116,7 @@ class UAS {
 
 
     private func convertToImperial(_ value: Double, unitType: Unit) -> Double {
+        obdDebug(" === Trace === In UAS func  convertToImperial ")
           switch unitType {
           case UnitTemperature.celsius:
               self.unit = UnitTemperature.fahrenheit
@@ -398,6 +399,8 @@ struct MonitorDecoder: Decoder {
 
 struct FuelRateDecoder: Decoder {
     func decode(data: Data, unit: MeasurementUnit) -> Result<DecodeResult, DecodeError> {
+  //      dump(data)
+  //      let value = 29.0
         let value = Double(bytesToInt(data)) * 0.05
         return .success((.measurementResult(MeasurementResult(value: value, unit: UnitFuelEfficiency.litersPer100Kilometers))))
     }
@@ -583,7 +586,7 @@ struct PressureDecoder: Decoder {
 
 struct FuelPressureDecoder: Decoder {
     func decode(data: Data, unit: MeasurementUnit) -> Result<DecodeResult, DecodeError> {
-		var value = Double(data.first ?? 0)
+        var value = Double(data.first ?? 0)
         value = value * 3
         return .success(.measurementResult(MeasurementResult(value: value, unit: UnitPressure.kilopascals)))
     }
@@ -666,8 +669,16 @@ struct PercentCenteredDecoder: Decoder {
 
 struct PercentDecoder: Decoder {
     func decode(data: Data, unit: MeasurementUnit) -> Result<DecodeResult, DecodeError> {
+      
+        obdDebug("Executed: \(#function) in \(#file) at line \(#line)")
+        obdDebug("in PercentDecoder and data is: \(data)")
         var value = Double(data.first ?? 0)
         value = value * 100.0 / 255.0
+        obdDebug("in PercentDecoder and value is: \(value)")
+        value = (value - 0.01)
+
+        let returnvalue: Result<DecodeResult, DecodeError> = .success(.measurementResult(MeasurementResult(value: value, unit: Unit.percent)))
+        obdDebug("in PercentDecoder returning and value is: \(returnvalue)  ")
         return .success(.measurementResult(MeasurementResult(value: value, unit: Unit.percent)))
     }
 }
@@ -920,3 +931,4 @@ let TestIds: [UInt8: (String, String)] = [
     0x0B: ("MisFireAverage", "The average number of misfires per 1000 revolutions"),
     0x0C: ("MisFireCount", "The number of misfires since the last reset")
 ]
+
