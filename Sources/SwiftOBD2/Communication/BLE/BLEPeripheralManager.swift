@@ -5,10 +5,13 @@ import Combine
 
 protocol BLEPeripheralManagerDelegate: AnyObject {
     func peripheralManager(_ manager: BLEPeripheralManager, didSetupCharacteristics peripheral: CBPeripheral)
+    
 }
 
 class BLEPeripheralManager: NSObject, ObservableObject {
+    
     func didWriteValue(_ peripheral: CBPeripheral, descriptor: CBDescriptor, error: (any Error)?) {
+        obdDebug(" === Trace === In BLEPeripheralManager func  didWriteValue ")
 
     }
 
@@ -25,6 +28,7 @@ class BLEPeripheralManager: NSObject, ObservableObject {
     }
 
     func setPeripheral(_ peripheral: CBPeripheral?) {
+        obdDebug(" === Trace === In BLEPeripheralManager func  setPeripheral")
         connectedPeripheral?.delegate = nil
         connectedPeripheral = peripheral
         connectedPeripheral?.delegate = self
@@ -35,6 +39,7 @@ class BLEPeripheralManager: NSObject, ObservableObject {
     }
 
     func waitForCharacteristicsSetup(timeout: TimeInterval) async throws {
+        obdDebug(" === Trace === In BLEPeripheralManager func  waitForCharacteristicsSetup")
         try await withTimeout(seconds: timeout) { [self] in
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 self.connectionCompletion = { peripheral, error in
@@ -51,34 +56,68 @@ class BLEPeripheralManager: NSObject, ObservableObject {
     }
 
     func didDiscoverServices(_ peripheral: CBPeripheral, error: Error?) {
+        obdDebug(" === Trace === In BLEPeripheralManager func  didDiscoverServices")
         for service in peripheral.services ?? [] {
             logger.info("Discovered service: \(service.uuid.uuidString)")
             characteristicHandler.discoverCharacteristics(for: service, on: peripheral)
         }
     }
 
+    
+    
+    
     func didDiscoverCharacteristics(_ peripheral: CBPeripheral, service: CBService, error: Error?) {
+        obdDebug(" === Trace === In BLEPeripheralManager func  didDiscoverCharacteristics")
         if let error = error {
             logger.error("Error discovering characteristics: \(error.localizedDescription)")
             connectionCompletion?(nil, error)
             return
         }
-
+        
         guard let characteristics = service.characteristics else { return }
-
+        
         characteristicHandler.setupCharacteristics(characteristics, on: peripheral)
-
-        // Check if all required characteristics are set up
-        if characteristicHandler.isReady {
+        
+//sr
+//=====================
+// AI provided fix to stop hang
+        
+        if characteristicHandler.isReady || characteristicHandler.isReadyRO {
             connectionCompletion?(peripheral, nil)
             connectionCompletion = nil
-
-            // Notify delegate
+            obdDebug("didDiscoverCharacteristics handler ready and notifying delegate")
             delegate?.peripheralManager(self, didSetupCharacteristics: peripheral)
+        } else {
+            obdDebug("didDiscoverCharacteristics handler NOT ready")
+            let error = NSError(
+                domain: "BLEPeripheralManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Required characteristics not found or device not writable."]
+            )
+            connectionCompletion?(nil, error)
+            connectionCompletion = nil
         }
     }
+        
+        
+//======================
 
+// original code with my sdded else and log message
+//        // Check if all required characteristics are set up
+//        if characteristicHandler.isReady {
+//            connectionCompletion?(peripheral, nil)
+//            connectionCompletion = nil
+//            obdDebug(" didDiscoverCharacteristics handler ready and notifying delegate")
+//            // Notify delegate
+//            delegate?.peripheralManager(self, didSetupCharacteristics: peripheral)
+//        } else {obdDebug(" didDiscoverCharacteristics handler NOT ready and code probably just hangs")}
+//    }
+
+    
+    
+    
     func didUpdateValue(_: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
+        obdDebug(" === Trace === In BLEPeripheralManager func  didUpdateValue")
         if let error = error {
             logger.error("Error reading characteristic value: \(error.localizedDescription)")
             return
@@ -87,6 +126,16 @@ class BLEPeripheralManager: NSObject, ObservableObject {
         guard let data = characteristic.value else { return }
         characteristicHandler.handleUpdatedValue(data, from: characteristic)
     }
+    
+      func reset() {
+        obdDebug(" === Trace === In BLEPeripheralManager func  reset")
+         connectedPeripheral?.delegate = nil
+         connectedPeripheral = nil
+         if let completion = connectionCompletion {
+             connectionCompletion = nil
+             completion(nil, BLEManagerError.peripheralNotConnected)
+         }
+     }
 }
 
 extension BLEPeripheralManager: CBPeripheralDelegate {
@@ -102,3 +151,4 @@ extension BLEPeripheralManager: CBPeripheralDelegate {
         didUpdateValue(peripheral, characteristic: characteristic, error: error)
     }
 }
+
