@@ -309,7 +309,9 @@ public class OBDService: ObservableObject, OBDServiceDelegate {
         obdDebug(" === Trace === In OBDservice func  sendCommand ")
         do {
             let response = try await sendCommandInternal(command.properties.command, retries: 3)
+#if !DEBUG
             dump(response)
+#endif
             guard let responseData = try elm327.canProtocol?.parse(response).first?.data else {
                 return .failure(.noData)
             }

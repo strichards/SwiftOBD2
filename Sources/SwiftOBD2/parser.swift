@@ -175,7 +175,10 @@ struct Frame {
         obdDebug("dataBytes Display : \(dataBytes)", category: .parsing)
         let datalen  = data.count
         obdDebug("data after drop 4  : \(data)  ")
+    
+#if !DEBUG
         dump(dataBytes)
+#endif
 
         guard dataBytes.count >= 6, dataBytes.count <= 12 else {
             obdError("Invalid frame size: \(dataBytes.count) bytes", category: .parsing)
