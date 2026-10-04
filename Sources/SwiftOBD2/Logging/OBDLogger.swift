@@ -5,7 +5,8 @@ import OSLog
 /// Provides structured logging with consistent categories and levels
 public class OBDLogger {
   
-    
+   
+ 
     
 #if DEBUG
     /// Controls whether logging is enabled
